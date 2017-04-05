@@ -1,18 +1,40 @@
-TARGET = demo.out
+TARGET := demo.out
+STATICLIB := libfma.a
+SHAREDLIB := libfma.so
+LIBSRC := fma.c
+LIBOBJ := $(LIBSRC:.c=.o)
+LIBDEP := $(LIBOBJ:.o=.d)
+MAINSRC := main.c
+MAINOBJ := $(MAINSRC:.c=.o)
+MAINDEP := $(MAINOBJ:.o=.d)
+DEPS := $(LIBDEP) $(MAINDEP)
+OBJS := $(MAINOBJ) $(LIBOBJ)
 
-$(TARGET): main.o libfma.a fma.go
-	gcc main.o libfma.a -o $@
+CPPFLAGS :=
+CPPFLAGS += -MMD
+CPPFLAGS += -MP
+
+CFLAGS :=
+CFLAGS += -mfma
+
+
+all : $(TARGET) $(STATICLIB) $(SHAREDLIB)
+
+$(TARGET): $(OBJS) fma.go
+	gcc -o $@ $(filter %.o,$^)
 	strip $@
 	go build fma.go
 
-main.o: main.c
-	gcc -c $< -o $@
+%.o : %.c
+	gcc -c -o $@ $(CPPFLAGS) $(CFLAGS) $<
 
-libfma.a: fma.o
+libfma.a: $(LIBOBJ)
 	ar rcs $@ $^
 
-fma.o: fma.c fma.h
-	gcc -c -mfma -o $@ $<
+libfma.so: $(LIBOBJ)
+	echo "some command to make an $@ from $^" > $@
 
 clean:
 	rm -f *.o *.a $(TARGET)
+
+-include $(DEPS)
